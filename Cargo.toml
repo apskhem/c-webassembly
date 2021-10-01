@@ -1,0 +1,29 @@
+[package]
+name = "c-webassembly"
+version = "0.1.0"
+authors = ["Apisit Ritreungroj <apisit_lon@hotmail.com>"]
+edition = "2018"
+readme = "README.md"
+license = "Apache-2.0"
+license-file = "LICENSE"
+categories = ["compiler"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+regex = { version = "1.5.4", features = ["std"] }
+
+[dev-dependencies]
+assert_cmd = "2.0.1"
+
+[profile.dev]
+opt-level = 0
+overflow-checks = true
+
+[profile.release]
+opt-level = "s"
+overflow-checks = true
+
+[[test]]
+path = "tests/default.rs"
+name = "default"

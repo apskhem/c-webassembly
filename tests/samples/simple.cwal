@@ -1,0 +1,25 @@
+mod {
+    mem memory = (1; page; 2);
+    tab table = (1; fref; 100);
+    
+    type return_i32 = fn() -> i32;
+
+    // testing function
+    fn test(a: i32, b: i32) -> (i32; 2) {
+        if (a) {
+            lc l0 <- a;
+        }
+        elif (a) {
+            while (a < b) {
+                break;
+            }
+        }
+        else {
+
+        }
+
+        lc l0 <- 1234;
+        l0 <- I32.add(1, 3) + (-1);
+        ret -10.1;
+    }
+}

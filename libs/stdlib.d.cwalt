@@ -1,0 +1,45 @@
+mod i32 {
+    def __vec__($size: u32) -> vec<i32>;
+    def $const($opr: inn) -> i32
+    def $add($rhs: i32, $lhs: i32) -> i32;
+    def $subs($rhs: i32, $lhs: i32) -> i32;
+    def $div_s($rhs: i32, $lhs: i32) -> i32;
+    def $div_u($rhs: i32, $lhs: i32) -> i32;
+    def $rem_s($rhs: i32, $lhs: i32) -> i32;
+    def $rem_u($rhs: i32, $lhs: i32) -> i32;
+    def $and($rhs: i32, $lhs: i32) -> i32;
+    def $or($rhs: i32, $lhs: i32) -> i32;
+    def $xor($rhs: i32, $lhs: i32) -> i32;
+    def $shl($rhs: i32, $lhs: i32) -> i32;
+    def $shl_u($rhs: i32, $lhs: i32) -> i32;
+    def $shl_r($rhs: i32, $lhs: i32) -> i32;
+    def $rotl($rhs: i32, $lhs: i32) -> i32;
+    def $rotr($rhs: i32, $lhs: i32) -> i32;
+    def $clz($opr: i32) -> i32;
+    def $ctz($opr: i32) -> i32;
+    def $popcnt($opr: i32) -> i32;
+    def $extend8_s($opr: i32) -> i32;
+    def $extend16_s($opr: i32) -> i32;
+    def $eqz($opr: i32) -> i32;
+    def $eq($rhs: i32, $lhs: i32) -> i32;
+    def $ne($rhs: i32, $lhs: i32) -> i32;
+    def $lt_s($rhs: i32, $lhs: i32) -> i32;
+    def $lt_u($rhs: i32, $lhs: i32) -> i32;
+    def $le_s($rhs: i32, $lhs: i32) -> i32;
+    def $le_u($rhs: i32, $lhs: i32) -> i32;
+    def $gt_s($rhs: i32, $lhs: i32) -> i32;
+    def $gt_u($rhs: i32, $lhs: i32) -> i32;
+    def $ge_s($rhs: i32, $lhs: i32) -> i32;
+    def $ge_u($rhs: i32, $lhs: i32) -> i32;
+}
+
+mod vec<T> {
+    def $get($off: u32) -> T;
+    def $set($off: u32, ) -> T;
+    def $size() -> T;
+    def $grow() -> T;
+    def $fill($off: u32) -> T;
+    def $copy($off: u32) -> T;
+    def $init($off: u32) -> T;
+    def $drop($off: u32) -> T;
+}
