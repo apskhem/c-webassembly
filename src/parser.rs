@@ -78,7 +78,7 @@ impl Parser {
         for _ in 0..pop_count {
             let removed = self.process_stack.pop_back();
             
-            println!("--< remove: {:?} >", removed.unwrap().info());
+            println!("--#( remove: {:?} )", removed.unwrap().info());
         }
     }
 

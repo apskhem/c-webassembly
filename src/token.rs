@@ -1,10 +1,7 @@
 use std::convert::TryFrom;
-use std::collections::VecDeque;
 use regex::Regex;
 
 use crate::definition;
-use crate::grammar;
-use crate::grammar::Grammar;
 
 // enums
 #[derive(Debug, Clone, PartialEq)]
@@ -90,12 +87,6 @@ pub enum Symbol {
     RightBrace,             // }
     LeftParenthese,         // (
     RightParenthese,        // )
-
-    // regex
-    RegexUnary,
-    RegexBinary,
-    RegexOperator,
-    RegexAny
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -111,10 +102,7 @@ pub enum Type {
     Xref,
 
     // memory types
-    Page,
-
-    // for matching
-    RegexAny
+    Page
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -128,48 +116,7 @@ pub struct RawToken<'a> {
     range: (usize, usize)
 }
 
-// implementation
-impl Token<'_> {
-    pub fn is_match(&self, token: &Token) -> bool {
-        return match (token, self) {
-            // comment
-            (Token::Comment(Comment(x)), Token::Comment(Comment(y))) => {
-                Regex::new(y).unwrap().is_match(x)
-            },
-            // keyword
-            (Token::Keyword(x), Token::Keyword(y)) => {
-                x == y
-            },
-            // type
-            (Token::Type(x), Token::Type(y)) => {
-                y == &Type::RegexAny || x == y
-            },
-            // identifier
-            (Token::Identifier(Identifier(x)), Token::Identifier(Identifier(y))) => {
-                Regex::new(y).unwrap().is_match(x)
-            },
-            // numeric literal
-            (Token::Literal(Literal::String(x)), Token::Literal(Literal::String(y))) => {
-                Regex::new(y).unwrap().is_match(x)
-            },
-            // string literal
-            (Token::Literal(Literal::Numeric(x)), Token::Literal(Literal::Numeric(y))) => {
-                Regex::new(y).unwrap().is_match(x)
-            },
-            // symbol
-            (Token::Symbol(x), Token::Symbol(y)) => {
-                x == y
-            },
-            _ => false
-        };
-    }
-}
-
 impl<'a> Identifier<'a> {
-    pub fn from_regex(s: &'a str) -> Self {
-        return Identifier(s);
-    }
-
     pub fn is_alphabetic_valid_char(c: char) -> bool {
         return c.is_alphabetic() || Identifier::is_extended_symbol(c);
     }
@@ -190,16 +137,6 @@ impl Symbol {
 
     pub fn match_char(c: char) -> bool {
         return definition::SYMBOL_TOKENS.iter().any(|x| return x.0.starts_with(c));
-    }
-}
-
-impl<'a> Literal<'a> {
-    pub fn from_numeric_regex(s: &'a str) -> Self {
-        return Literal::Numeric(s);
-    }
-
-    pub fn from_string_regex(s: &'a str) -> Self {
-        return Literal::String(s);
     }
 }
 
@@ -392,25 +329,5 @@ impl<'a> From<Literal<'a>> for Token<'a> {
 impl From<Symbol> for Token<'_> {
     fn from(t: Symbol) -> Self {
         return Token::Symbol(t);
-    }
-}
-
-// implement processable trait
-impl Grammar for Token<'_> {
-    fn process(&mut self, token: &Token) -> grammar::Result {
-        if self.is_match(token) {
-            return grammar::Result::Consumed(VecDeque::new());
-        }
-        else {
-            return grammar::Result::Unexpected(format!("mismatched token: '{:?}' compared with '{:?}'", self, token));
-        }
-    }
-
-    fn is_done(&self) -> bool {
-        return true;
-    }
-
-    fn info(&self) -> String {
-        return format!("Token");
     }
 }

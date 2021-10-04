@@ -64,7 +64,7 @@ pub const KEYWORD_TOKENS: &[(&str, token::Keyword)] = &[
     ("else",    token::Keyword::Else),
     ("elif",    token::Keyword::ElseIf),
     ("while",   token::Keyword::While),
-    ("break",   token::Keyword::Break),
+    ("brk",     token::Keyword::Break),
     ("cont",    token::Keyword::Cont),
     ("typeof",  token::Keyword::TypeOf),
     ("exp",     token::Keyword::Export),

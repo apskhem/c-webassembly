@@ -1,6 +1,7 @@
 use std::collections::VecDeque;
 
 use crate::token;
+use crate::token_grammar;
 
 pub trait Grammar {
     fn process(&mut self, token: &token::Token) -> Result;
@@ -150,10 +151,27 @@ impl ModuleDeclaration {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Keyword(token::Keyword::Module))
+                    || return Box::new(token_grammar::TokenGrammar::from_keyword(token::Keyword::Module))
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::LeftBrace))
+                    || return Box::new(ModuleBlock::new())
+                ])
+            ])
+        };
+    }
+}
+
+// module block
+pub struct ModuleBlock {
+    pattern: GrammarPattern<'static>
+}
+
+impl ModuleBlock {
+    pub fn new() -> Self {
+        return Self {
+            pattern: GrammarPattern::new(&[
+                GrammarQuantifier::One(&[
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::LeftBrace))
                 ]),
                 GrammarQuantifier::OptionalMany(&[
                     || return Box::new(FunctionDeclaration::new()),
@@ -163,11 +181,11 @@ impl ModuleDeclaration {
                     || return Box::new(GlobalDeclaration::new()),
                     || return Box::new(ImportDeclaration::new()),
                     || return Box::new(ExportDeclaration::new()),
-                    || return Box::new(AssignmentStatement::new()),
-                    || return Box::new(token::Token::Symbol(token::Symbol::SemiColon))
+                    || return Box::new(ExpressionStatement::new()),
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::SemiColon))
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::RightBrace))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::RightBrace))
                 ])
             ])
         };
@@ -201,7 +219,7 @@ impl UnitType {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Type(token::Type::RegexAny))
+                    || return Box::new(token_grammar::TokenGrammar::any_type())
                 ])
             ])
         };
@@ -217,10 +235,10 @@ impl VecShorthandType {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::SemiColon))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::SemiColon))
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Literal(token::Literal::from_numeric_regex(".")))
+                    || return Box::new(token_grammar::TokenGrammar::any_numeric_literal())
                 ])
             ])
         };
@@ -236,14 +254,14 @@ impl ParentheseTypeVariant {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::LeftParenthese))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::LeftParenthese))
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(ConRangeType::new()),
                     || return Box::new(ConTupleType::new())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::RightParenthese))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::RightParenthese))
                 ])
             ])
         };
@@ -259,19 +277,19 @@ impl ConRangeType {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Literal(token::Literal::from_numeric_regex(".")))
+                    || return Box::new(token_grammar::TokenGrammar::any_numeric_literal())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::SemiColon))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::SemiColon))
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Type(token::Type::RegexAny))
+                    || return Box::new(token_grammar::TokenGrammar::any_type())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::SemiColon))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::SemiColon))
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Literal(token::Literal::from_numeric_regex(".")))
+                    || return Box::new(token_grammar::TokenGrammar::any_numeric_literal())
                 ])
             ])
         };
@@ -287,7 +305,7 @@ impl ConTupleType {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Type(token::Type::RegexAny))
+                    || return Box::new(token_grammar::TokenGrammar::any_type())
                 ]),
                 GrammarQuantifier::OptionalOne(&[
                     || return Box::new(TupleTypeRecursiveSequence::new()),
@@ -323,10 +341,10 @@ impl TupleTypeSequence {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::Comma))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::Comma))
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Type(token::Type::RegexAny))
+                    || return Box::new(token_grammar::TokenGrammar::any_type())
                 ])
             ])
         };
@@ -343,20 +361,20 @@ impl GlobalDeclaration {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Keyword(token::Keyword::Global))
+                    || return Box::new(token_grammar::TokenGrammar::from_keyword(token::Keyword::Global))
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(MutableIdDeclaration::new()),
                     || return Box::new(MultiIdDeclaration::new())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::LeftArrow))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::LeftArrow))
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(Expression::new())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::SemiColon))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::SemiColon))
                 ])
             ])
         };
@@ -372,16 +390,16 @@ impl ImportedGlobalDeclaration {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Keyword(token::Keyword::Global))
+                    || return Box::new(token_grammar::TokenGrammar::from_keyword(token::Keyword::Global))
                 ]),
                 GrammarQuantifier::OptionalOne(&[
-                    || return Box::new(token::Token::Keyword(token::Keyword::Mutable))
+                    || return Box::new(token_grammar::TokenGrammar::from_keyword(token::Keyword::Mutable))
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Identifier(token::Identifier::from_regex(".")))
+                    || return Box::new(token_grammar::TokenGrammar::any_identifier())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::Assignment))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::Assignment))
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(TypeDefinition::new())
@@ -401,20 +419,19 @@ impl TypeDeclaration {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Keyword(token::Keyword::Type))
+                    || return Box::new(token_grammar::TokenGrammar::from_keyword(token::Keyword::Type))
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Identifier(token::Identifier::from_regex(".")))
+                    || return Box::new(token_grammar::TokenGrammar::any_identifier())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::Assignment))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::Assignment))
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(FunctionExpression::new()),
-                    || return Box::new(TypeOfExpression::new())
+                    || return Box::new(TypeExpression::new())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::SemiColon))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::SemiColon))
                 ])
             ])
         };
@@ -431,19 +448,19 @@ impl TableDeclaration {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Keyword(token::Keyword::Table))
+                    || return Box::new(token_grammar::TokenGrammar::from_keyword(token::Keyword::Table))
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Identifier(token::Identifier::from_regex(".")))
+                    || return Box::new(token_grammar::TokenGrammar::any_identifier())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::Assignment))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::Assignment))
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(TypeDefinition::new())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::SemiColon))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::SemiColon))
                 ])
             ])
         };
@@ -459,13 +476,13 @@ impl ImportedTableDeclaration {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Keyword(token::Keyword::Table))
+                    || return Box::new(token_grammar::TokenGrammar::from_keyword(token::Keyword::Table))
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Identifier(token::Identifier::from_regex(".")))
+                    || return Box::new(token_grammar::TokenGrammar::any_identifier())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::Assignment))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::Assignment))
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(TypeDefinition::new())
@@ -485,19 +502,19 @@ impl MemoryDeclaration {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Keyword(token::Keyword::Memory))
+                    || return Box::new(token_grammar::TokenGrammar::from_keyword(token::Keyword::Memory))
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Identifier(token::Identifier::from_regex(".")))
+                    || return Box::new(token_grammar::TokenGrammar::any_identifier())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::Assignment))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::Assignment))
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(TypeDefinition::new())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::SemiColon))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::SemiColon))
                 ])
             ])
         };
@@ -513,13 +530,13 @@ impl ImportedMemoryDeclaration {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Keyword(token::Keyword::Memory))
+                    || return Box::new(token_grammar::TokenGrammar::from_keyword(token::Keyword::Memory))
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Identifier(token::Identifier::from_regex(".")))
+                    || return Box::new(token_grammar::TokenGrammar::any_identifier())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::Assignment))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::Assignment))
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(TypeDefinition::new())
@@ -539,22 +556,22 @@ impl ImportDeclaration {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Keyword(token::Keyword::Import))
+                    || return Box::new(token_grammar::TokenGrammar::from_keyword(token::Keyword::Import))
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(ImportedFunctionDeclaration::new()),
                     || return Box::new(ImportedTableDeclaration::new()),
                     || return Box::new(ImportedMemoryDeclaration::new()),
-                    || return Box::new(ImportedGlobalDeclaration::new()),
+                    || return Box::new(ImportedGlobalDeclaration::new())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Keyword(token::Keyword::From))
+                    || return Box::new(token_grammar::TokenGrammar::from_keyword(token::Keyword::From))
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Literal(token::Literal::from_string_regex("."))),
+                    || return Box::new(token_grammar::TokenGrammar::any_string_literal())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::SemiColon))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::SemiColon))
                 ])
             ])
         };
@@ -571,7 +588,7 @@ impl ExportDeclaration {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Keyword(token::Keyword::Export))
+                    || return Box::new(token_grammar::TokenGrammar::from_keyword(token::Keyword::Export))
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(FunctionDeclaration::new()),
@@ -594,16 +611,16 @@ impl AliasedExportDeclaration {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Identifier(token::Identifier::from_regex(".")))
+                    || return Box::new(token_grammar::TokenGrammar::any_identifier())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Keyword(token::Keyword::As))
+                    || return Box::new(token_grammar::TokenGrammar::from_keyword(token::Keyword::As))
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Literal(token::Literal::from_string_regex("."))),
+                    || return Box::new(token_grammar::TokenGrammar::any_string_literal()),
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::SemiColon))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::SemiColon))
                 ])
             ])
         };
@@ -620,10 +637,10 @@ impl FunctionDeclaration {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Keyword(token::Keyword::Function))
+                    || return Box::new(token_grammar::TokenGrammar::from_keyword(token::Keyword::Function))
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Identifier(token::Identifier::from_regex(".")))
+                    || return Box::new(token_grammar::TokenGrammar::any_identifier())
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(Signature::new())
@@ -645,13 +662,96 @@ impl ImportedFunctionDeclaration {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Keyword(token::Keyword::Function))
+                    || return Box::new(token_grammar::TokenGrammar::from_keyword(token::Keyword::Function))
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Identifier(token::Identifier::from_regex(".")))
+                    || return Box::new(token_grammar::TokenGrammar::any_identifier())
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(Signature::new())
+                ])
+            ])
+        };
+    }
+}
+
+// -> type signature
+pub struct TypeSignature {
+    pattern: GrammarPattern<'static>
+}
+
+impl TypeSignature {
+    pub fn new() -> Self {
+        return Self {
+            pattern: GrammarPattern::new(&[
+                GrammarQuantifier::One(&[
+                    || return Box::new(TypeParameter::new())
+                ]),
+                GrammarQuantifier::OptionalOne(&[
+                    || return Box::new(ResultType::new())
+                ])
+            ])
+        };
+    }
+}
+
+// -> type parameter
+pub struct TypeParameter {
+    pattern: GrammarPattern<'static>
+}
+
+impl TypeParameter {
+    pub fn new() -> Self {
+        return Self {
+            pattern: GrammarPattern::new(&[
+                GrammarQuantifier::One(&[
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::LeftParenthese))
+                ]),
+                GrammarQuantifier::OptionalOne(&[
+                    || return Box::new(TypeParamSequence::new())
+                ]),
+                GrammarQuantifier::One(&[
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::RightParenthese))
+                ])
+            ])
+        };
+    }
+}
+
+// -> type param sequence
+pub struct TypeParamSequence {
+    pattern: GrammarPattern<'static>
+}
+
+impl TypeParamSequence {
+    pub fn new() -> Self {
+        return Self {
+            pattern: GrammarPattern::new(&[
+                GrammarQuantifier::One(&[
+                    || return Box::new(token_grammar::TokenGrammar::any_type())
+                ]),
+                GrammarQuantifier::OptionalMany(&[
+                    || return Box::new(ConTypeParamSequence::new())
+                ])
+            ])
+        };
+    }
+}
+
+// -> con: type param sequence
+pub struct ConTypeParamSequence {
+    pattern: GrammarPattern<'static>
+}
+
+impl ConTypeParamSequence {
+    pub fn new() -> Self {
+        return Self {
+            pattern: GrammarPattern::new(&[
+                GrammarQuantifier::One(&[
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::Comma))
+                ]),
+                GrammarQuantifier::One(&[
+                    || return Box::new(token_grammar::TokenGrammar::any_type())
                 ])
             ])
         };
@@ -688,13 +788,13 @@ impl Parameter {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::LeftParenthese))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::LeftParenthese))
                 ]),
                 GrammarQuantifier::OptionalOne(&[
                     || return Box::new(ParamSequence::new())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::RightParenthese))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::RightParenthese))
                 ])
             ])
         };
@@ -731,10 +831,10 @@ impl ParamType {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Identifier(token::Identifier::from_regex(".")))
+                    || return Box::new(token_grammar::TokenGrammar::any_identifier())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::Colon))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::Colon))
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(TypeDefinition::new())
@@ -753,7 +853,7 @@ impl ConParamType {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::Comma))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::Comma))
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(ParamType::new())
@@ -773,7 +873,7 @@ impl ResultType {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::RightArrow))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::RightArrow))
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(TypeDefinition::new())
@@ -793,20 +893,20 @@ impl FunctionBlock {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::LeftBrace))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::LeftBrace))
                 ]),
                 GrammarQuantifier::OptionalMany(&[
                     || return Box::new(LocalDeclaration::new()),
-                    || return Box::new(AssignmentStatement::new()),
+                    || return Box::new(ExpressionStatement::new()),
                     || return Box::new(IfStatement::new()),
                     || return Box::new(WhileStatement::new()),
                     || return Box::new(ReturnStatement::new()),
                     || return Box::new(BreakStatement::new()),
                     || return Box::new(ContinueStatement::new()),
-                    || return Box::new(token::Token::Symbol(token::Symbol::SemiColon))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::SemiColon))
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::RightBrace))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::RightBrace))
                 ])
             ])
         };
@@ -823,20 +923,20 @@ impl LocalDeclaration {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Keyword(token::Keyword::Local))
+                    || return Box::new(token_grammar::TokenGrammar::from_keyword(token::Keyword::Local))
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(MutableIdDeclaration::new()),
                     || return Box::new(MultiIdDeclaration::new())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::LeftArrow))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::LeftArrow))
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(Expression::new())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::SemiColon))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::SemiColon))
                 ])
             ])
         };
@@ -852,10 +952,10 @@ impl MutableIdDeclaration {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::OptionalOne(&[
-                    || return Box::new(token::Token::Keyword(token::Keyword::Mutable))
+                    || return Box::new(token_grammar::TokenGrammar::from_keyword(token::Keyword::Mutable))
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Identifier(token::Identifier::from_regex(".")))
+                    || return Box::new(token_grammar::TokenGrammar::any_identifier())
                 ])
             ])
         };
@@ -871,7 +971,7 @@ impl MultiIdDeclaration {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::LeftParenthese))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::LeftParenthese))
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(MutableIdDeclaration::new())
@@ -880,7 +980,7 @@ impl MultiIdDeclaration {
                     || return Box::new(ConMultiIdDeclaration::new())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::RightParenthese))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::RightParenthese))
                 ])
             ])
         };
@@ -896,7 +996,7 @@ impl ConMultiIdDeclaration {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::Comma))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::Comma))
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(MutableIdDeclaration::new())
@@ -916,7 +1016,7 @@ impl IfStatement {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Keyword(token::Keyword::If))
+                    || return Box::new(token_grammar::TokenGrammar::from_keyword(token::Keyword::If))
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(GroupedOrTupleExpression::new())
@@ -944,7 +1044,7 @@ impl ElseIfStatement {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Keyword(token::Keyword::ElseIf))
+                    || return Box::new(token_grammar::TokenGrammar::from_keyword(token::Keyword::ElseIf))
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(GroupedOrTupleExpression::new())
@@ -966,7 +1066,7 @@ impl ElseStatement {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Keyword(token::Keyword::Else))
+                    || return Box::new(token_grammar::TokenGrammar::from_keyword(token::Keyword::Else))
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(FunctionBlock::new())
@@ -986,7 +1086,7 @@ impl WhileStatement {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Keyword(token::Keyword::While))
+                    || return Box::new(token_grammar::TokenGrammar::from_keyword(token::Keyword::While))
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(GroupedOrTupleExpression::new())
@@ -1008,10 +1108,10 @@ impl BreakStatement {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Keyword(token::Keyword::Break))
+                    || return Box::new(token_grammar::TokenGrammar::from_keyword(token::Keyword::Break))
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::SemiColon))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::SemiColon))
                 ])
             ])
         };
@@ -1027,10 +1127,10 @@ impl ContinueStatement {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Keyword(token::Keyword::Cont))
+                    || return Box::new(token_grammar::TokenGrammar::from_keyword(token::Keyword::Cont))
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::SemiColon))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::SemiColon))
                 ])
             ])
         };
@@ -1047,13 +1147,36 @@ impl ReturnStatement {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Keyword(token::Keyword::Return))
+                    || return Box::new(token_grammar::TokenGrammar::from_keyword(token::Keyword::Return))
                 ]),
                 GrammarQuantifier::OptionalOne(&[
                     || return Box::new(Expression::new())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::SemiColon))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::SemiColon))
+                ])
+            ])
+        };
+    }
+}
+
+// -> expression statement
+pub struct ExpressionStatement {
+    pattern: GrammarPattern<'static>
+}
+
+impl ExpressionStatement {
+    pub fn new() -> Self {
+        return Self {
+            pattern: GrammarPattern::new(&[
+                GrammarQuantifier::One(&[
+                    || return Box::new(Expression::new())
+                ]),
+                GrammarQuantifier::OptionalOne(&[
+                    || return Box::new(ConAssignmentStatement::new())
+                ]),
+                GrammarQuantifier::One(&[
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::SemiColon))
                 ])
             ])
         };
@@ -1061,26 +1184,19 @@ impl ReturnStatement {
 }
 
 // -> assignment
-pub struct AssignmentStatement {
+pub struct ConAssignmentStatement {
     pattern: GrammarPattern<'static>
 }
 
-impl AssignmentStatement {
+impl ConAssignmentStatement {
     pub fn new() -> Self {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Identifier(token::Identifier::from_regex("."))),
-                    || return Box::new(OffsetExpression::new())
-                ]),
-                GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::LeftArrow))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::LeftArrow))
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(Expression::new())
-                ]),
-                GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::SemiColon))
                 ])
             ])
         };
@@ -1096,9 +1212,8 @@ impl Expression {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Literal(token::Literal::from_numeric_regex("."))),
+                    || return Box::new(token_grammar::TokenGrammar::any_numeric_literal()),
                     || return Box::new(WithIdExpression::new()),
-                    || return Box::new(FunctionExpression::new()),
                     || return Box::new(TypeOfExpression::new()),
                     || return Box::new(OffsetExpression::new()),
                     || return Box::new(GroupedOrTupleExpression::new()),
@@ -1125,13 +1240,13 @@ impl WithIdExpression {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Identifier(token::Identifier::from_regex(".")))
+                    || return Box::new(token_grammar::TokenGrammar::any_identifier())
                 ]),
                 GrammarQuantifier::OptionalMany(&[
                     || return Box::new(ConMemberExpression::new())
                 ]),
                 GrammarQuantifier::OptionalOne(&[
-                    || return Box::new(GroupedOrTupleExpression::new()),
+                    || return Box::new(FuncCallArg::new()),
                     || return Box::new(ConCallIndirectExpression::new())
                 ])
             ])
@@ -1148,7 +1263,7 @@ impl ConExprSequence {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::Comma))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::Comma))
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(Expression::new())
@@ -1168,20 +1283,13 @@ impl ConCallIndirectExpression {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::DoubleColon))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::DoubleColon))
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::LeftParenthese))
+                    || return Box::new(GenericArgument::new())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Identifier(token::Identifier::from_regex("."))),
-                    || return Box::new(TypeOfExpression::new())
-                ]),
-                GrammarQuantifier::OptionalOne(&[
-                    || return Box::new(CallIndirectArg::new())
-                ]),
-                GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::RightParenthese))
+                    || return Box::new(FuncCallArg::new())
                 ])
             ])
         };
@@ -1189,19 +1297,60 @@ impl ConCallIndirectExpression {
 }
 
 // -> call indirect argument
-pub struct CallIndirectArg {
+pub struct FuncCallArg {
     pattern: GrammarPattern<'static>
 }
 
-impl CallIndirectArg {
+impl FuncCallArg {
     pub fn new() -> Self {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::Comma))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::LeftParenthese))
+                ]),
+                GrammarQuantifier::OptionalOne(&[
+                    || return Box::new(FuncCallArgSequence::new())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(GroupedOrTupleExpression::new())
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::RightParenthese))
+                ])
+            ])
+        };
+    }
+}
+
+pub struct FuncCallArgSequence {
+    pattern: GrammarPattern<'static>
+}
+
+impl FuncCallArgSequence {
+    pub fn new() -> Self {
+        return Self {
+            pattern: GrammarPattern::new(&[
+                GrammarQuantifier::One(&[
+                    || return Box::new(Expression::new())
+                ]),
+                GrammarQuantifier::OptionalMany(&[
+                    || return Box::new(ConFuncCallArgSequence::new())
+                ])
+            ])
+        };
+    }
+}
+
+pub struct ConFuncCallArgSequence {
+    pattern: GrammarPattern<'static>
+}
+
+impl ConFuncCallArgSequence {
+    pub fn new() -> Self {
+        return Self {
+            pattern: GrammarPattern::new(&[
+                GrammarQuantifier::One(&[
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::Comma))
+                ]),
+                GrammarQuantifier::One(&[
+                    || return Box::new(Expression::new())
                 ])
             ])
         };
@@ -1218,10 +1367,7 @@ impl UnaryExpression {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::Plus)),
-                    || return Box::new(token::Token::Symbol(token::Symbol::Minus)),
-                    || return Box::new(token::Token::Symbol(token::Symbol::BitwiseNot)),
-                    || return Box::new(token::Token::Symbol(token::Symbol::LogicalNegation))
+                    || return Box::new(token_grammar::TokenGrammar::any_unary_symbol())
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(Expression::new())
@@ -1241,28 +1387,7 @@ impl ConBinaryExpression {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::Plus)),
-                    || return Box::new(token::Token::Symbol(token::Symbol::Minus)),
-                    || return Box::new(token::Token::Symbol(token::Symbol::Asterisk)),
-                    || return Box::new(token::Token::Symbol(token::Symbol::Solidus)),
-                    || return Box::new(token::Token::Symbol(token::Symbol::Modulo)),
-                    || return Box::new(token::Token::Symbol(token::Symbol::Equal)),
-                    || return Box::new(token::Token::Symbol(token::Symbol::NotEqual)),
-                    || return Box::new(token::Token::Symbol(token::Symbol::LessThan)),
-                    || return Box::new(token::Token::Symbol(token::Symbol::GreaterThan)),
-                    || return Box::new(token::Token::Symbol(token::Symbol::LessThanOrEqual)),
-                    || return Box::new(token::Token::Symbol(token::Symbol::GreaterThanOrEqual)),
-                    || return Box::new(token::Token::Symbol(token::Symbol::BitwiseAnd)),
-                    || return Box::new(token::Token::Symbol(token::Symbol::BitwiseOr)),
-                    || return Box::new(token::Token::Symbol(token::Symbol::BitwiseXor)),
-                    || return Box::new(token::Token::Symbol(token::Symbol::BitwiseNot)),
-                    || return Box::new(token::Token::Symbol(token::Symbol::ShiftLeftLogical)),
-                    || return Box::new(token::Token::Symbol(token::Symbol::ShiftRightArithmatic)),
-                    || return Box::new(token::Token::Symbol(token::Symbol::ShiftRightLogical)),
-                    || return Box::new(token::Token::Symbol(token::Symbol::RotateLeft)),
-                    || return Box::new(token::Token::Symbol(token::Symbol::RotateRight)),
-                    || return Box::new(token::Token::Symbol(token::Symbol::LogicalAnd)),
-                    || return Box::new(token::Token::Symbol(token::Symbol::LogicalOr)),
+                    || return Box::new(token_grammar::TokenGrammar::any_binary_symbol())
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(Expression::new())
@@ -1282,13 +1407,13 @@ impl ConConditionalExpression {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::Query))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::Query))
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(Expression::new())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::Colon))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::Colon))
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(Expression::new())
@@ -1308,10 +1433,10 @@ impl ConMemberExpression {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::Dot))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::Dot))
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Identifier(token::Identifier::from_regex(".")))
+                    || return Box::new(token_grammar::TokenGrammar::any_identifier())
                 ])
             ])
         };
@@ -1328,7 +1453,7 @@ impl GroupedOrTupleExpression {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::LeftParenthese))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::LeftParenthese))
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(Expression::new())
@@ -1337,27 +1462,27 @@ impl GroupedOrTupleExpression {
                     || return Box::new(ConExprSequence::new())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::RightParenthese))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::RightParenthese))
                 ])
             ])
         };
     }
 }
 
-// -> function
-pub struct FunctionExpression {
+// -> type function
+pub struct TypeFunctionExpression {
     pattern: GrammarPattern<'static>
 }
 
-impl FunctionExpression {
+impl TypeFunctionExpression {
     pub fn new() -> Self {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Keyword(token::Keyword::Function))
+                    || return Box::new(token_grammar::TokenGrammar::from_keyword(token::Keyword::Function))
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(Signature::new())
+                    || return Box::new(TypeSignature::new())
                 ])
             ])
         };
@@ -1374,10 +1499,10 @@ impl TypeOfExpression {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Keyword(token::Keyword::TypeOf))
+                    || return Box::new(token_grammar::TokenGrammar::from_keyword(token::Keyword::TypeOf))
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Identifier(token::Identifier::from_regex("."))),
+                    || return Box::new(token_grammar::TokenGrammar::any_identifier()),
                 ])
             ])
         };
@@ -1394,23 +1519,69 @@ impl OffsetExpression {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::Asterisk))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::Asterisk))
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Literal(token::Literal::from_numeric_regex("."))),
-                    || return Box::new(token::Token::Identifier(token::Identifier::from_regex(".")))
+                    || return Box::new(token_grammar::TokenGrammar::any_numeric_literal()),
+                    || return Box::new(token_grammar::TokenGrammar::any_identifier())
+                ]),
+                GrammarQuantifier::OptionalOne(&[
+                    || return Box::new(GenericArgument::new())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::LeftParenthese))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::LeftParenthese))
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Identifier(token::Identifier::from_regex(".")))
+                    || return Box::new(token_grammar::TokenGrammar::any_identifier())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token::Token::Symbol(token::Symbol::RightParenthese))
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::RightParenthese))
                 ]),
                 GrammarQuantifier::OptionalOne(&[
                     || return Box::new(ConCallIndirectExpression::new())
+                ])
+            ])
+        };
+    }
+}
+
+// -> ganeric
+pub struct GenericArgument {
+    pattern: GrammarPattern<'static>
+}
+
+impl GenericArgument {
+    pub fn new() -> Self {
+        return Self {
+            pattern: GrammarPattern::new(&[
+                GrammarQuantifier::One(&[
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::LessThan))
+                ]),
+                GrammarQuantifier::One(&[
+                    || return Box::new(TypeExpression::new())
+                ]),
+                GrammarQuantifier::One(&[
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::GreaterThan))
+                ])
+            ])
+        };
+    }
+}
+
+pub struct TypeExpression {
+    pattern: GrammarPattern<'static>
+}
+
+impl TypeExpression {
+    pub fn new() -> Self {
+        return Self {
+            pattern: GrammarPattern::new(&[
+                GrammarQuantifier::One(&[
+                    || return Box::new(token_grammar::TokenGrammar::any_identifier()),
+                    || return Box::new(token_grammar::TokenGrammar::any_type()),
+                    || return Box::new(TypeFunctionExpression::new()),
+                    || return Box::new(TypeSignature::new()),
+                    || return Box::new(TypeOfExpression::new())
                 ])
             ])
         };
@@ -1421,323 +1592,383 @@ impl OffsetExpression {
 impl Grammar for Program {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("Program, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("Program:[{}]", self.pattern.state); }
 }
 
 impl Grammar for TypeDefinition {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("TypeDefinition, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("TypeDefinition:[{}]", self.pattern.state); }
 }
 
 impl Grammar for UnitType {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("UnitType, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("UnitType:[{}]", self.pattern.state); }
 }
 
 impl Grammar for VecShorthandType {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("VecShorthandType, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("VecShorthandType:[{}]", self.pattern.state); }
 }
 
 impl Grammar for ParentheseTypeVariant {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ParentheseTypeVariant, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("ParentheseTypeVariant:[{}]", self.pattern.state); }
 }
 
 impl Grammar for ConRangeType {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ConRangeType, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("ConRangeType:[{}]", self.pattern.state); }
 }
 
 impl Grammar for ConTupleType {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ConTupleType, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("ConTupleType:[{}]", self.pattern.state); }
 }
 
 impl Grammar for TupleTypeRecursiveSequence {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("TupleTypeRecursiveSequence, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("TupleTypeRecursiveSequence:[{}]", self.pattern.state); }
 }
 
 impl Grammar for TupleTypeSequence {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("TupleTypeSequence, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("TupleTypeSequence:[{}]", self.pattern.state); }
 }
 
 impl Grammar for ModuleDeclaration {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ModuleDeclaration, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("ModuleDeclaration:[{}]", self.pattern.state); }
+}
+
+impl Grammar for ModuleBlock {
+    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
+    fn is_done(&self) -> bool { return self.pattern.is_done; }
+    fn info(&self) -> String { return format!("ModuleBlock:[{}]", self.pattern.state); }
 }
 
 impl Grammar for FunctionDeclaration {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("FunctionDeclaration, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("FunctionDeclaration:[{}]", self.pattern.state); }
 }
 
 impl Grammar for ImportedFunctionDeclaration {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ImportedFunctionDeclaration, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("ImportedFunctionDeclaration:[{}]", self.pattern.state); }
 }
 
 impl Grammar for GlobalDeclaration {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("GlobalDeclaration, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("GlobalDeclaration:[{}]", self.pattern.state); }
 }
 
 impl Grammar for ImportedGlobalDeclaration {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ImportedGlobalDeclaration, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("ImportedGlobalDeclaration:[{}]", self.pattern.state); }
 }
 
 impl Grammar for MemoryDeclaration {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("MemoryDeclaration, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("MemoryDeclaration:[{}]", self.pattern.state); }
 }
 
 impl Grammar for ImportedMemoryDeclaration {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ImportedMemoryDeclaration, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("ImportedMemoryDeclaration:[{}]", self.pattern.state); }
 }
 
 impl Grammar for TypeDeclaration {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("TypeDeclaration, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("TypeDeclaration:[{}]", self.pattern.state); }
 }
 
 impl Grammar for TableDeclaration {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("TableDeclaration, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("TableDeclaration:[{}]", self.pattern.state); }
 }
 
 impl Grammar for ImportedTableDeclaration {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ImportedTableDeclaration, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("ImportedTableDeclaration:[{}]", self.pattern.state); }
 }
 
 impl Grammar for ImportDeclaration {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ImportDeclaration, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("ImportDeclaration:[{}]", self.pattern.state); }
 }
 
 impl Grammar for ExportDeclaration {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ExportDeclaration, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("ExportDeclaration:[{}]", self.pattern.state); }
 }
 
 impl Grammar for AliasedExportDeclaration {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("AliasedExportDeclaration, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("AliasedExportDeclaration:[{}]", self.pattern.state); }
 }
 
 impl Grammar for Signature {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("Signature, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("Signature:[{}]", self.pattern.state); }
+}
+
+impl Grammar for TypeSignature {
+    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
+    fn is_done(&self) -> bool { return self.pattern.is_done; }
+    fn info(&self) -> String { return format!("TypeSignature:[{}]", self.pattern.state); }
+}
+
+impl Grammar for TypeParameter {
+    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
+    fn is_done(&self) -> bool { return self.pattern.is_done; }
+    fn info(&self) -> String { return format!("TypeParameter:[{}]", self.pattern.state); }
+}
+
+impl Grammar for TypeParamSequence {
+    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
+    fn is_done(&self) -> bool { return self.pattern.is_done; }
+    fn info(&self) -> String { return format!("TypeParamSequence:[{}]", self.pattern.state); }
+}
+
+impl Grammar for ConTypeParamSequence {
+    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
+    fn is_done(&self) -> bool { return self.pattern.is_done; }
+    fn info(&self) -> String { return format!("ConTypeParamSequence:[{}]", self.pattern.state); }
 }
 
 impl Grammar for Parameter {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("Parameter, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("Parameter:[{}]", self.pattern.state); }
 }
 
 impl Grammar for ParamSequence {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ParamSequence, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("ParamSequence:[{}]", self.pattern.state); }
 }
 
 impl Grammar for ParamType {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ParamType, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("ParamType:[{}]", self.pattern.state); }
 }
 
 impl Grammar for ConParamType {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ConParamType, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("ConParamType:[{}]", self.pattern.state); }
 }
 
 impl Grammar for ResultType {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ResultType, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("ResultType:[{}]", self.pattern.state); }
 }
 
 impl Grammar for FunctionBlock {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("FunctionBlock, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("FunctionBlock:[{}]", self.pattern.state); }
 }
 
 impl Grammar for LocalDeclaration {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("LocalDeclaration, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("LocalDeclaration:[{}]", self.pattern.state); }
 }
 
 impl Grammar for MutableIdDeclaration {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("MutableIdDeclaration, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("MutableIdDeclaration:[{}]", self.pattern.state); }
 }
 
 impl Grammar for MultiIdDeclaration {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("MultiIdDeclaration, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("MultiIdDeclaration:[{}]", self.pattern.state); }
 }
 
 impl Grammar for ConMultiIdDeclaration {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ConMultiIdDeclaration, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("ConMultiIdDeclaration:[{}]", self.pattern.state); }
 }
 
 impl Grammar for IfStatement {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("IfStatement, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("IfStatement:[{}]", self.pattern.state); }
 }
 
 impl Grammar for ElseIfStatement {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ElseIfStatement, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("ElseIfStatement:[{}]", self.pattern.state); }
 }
 
 impl Grammar for ElseStatement {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ElseStatement, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("ElseStatement:[{}]", self.pattern.state); }
 }
 
 impl Grammar for WhileStatement {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("WhileStatement, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("WhileStatement:[{}]", self.pattern.state); }
 }
 
 impl Grammar for BreakStatement {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("BreakStatement, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("BreakStatement:[{}]", self.pattern.state); }
 }
 
 impl Grammar for ContinueStatement {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ContinueStatement, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("ContinueStatement:[{}]", self.pattern.state); }
 }
 
 impl Grammar for ReturnStatement {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ReturnStatement, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("ReturnStatement:[{}]", self.pattern.state); }
 }
 
-impl Grammar for AssignmentStatement {
+impl Grammar for ExpressionStatement {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("AssignmentStatement, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("ExpressionStatement:[{}]", self.pattern.state); }
+}
+
+impl Grammar for ConAssignmentStatement {
+    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
+    fn is_done(&self) -> bool { return self.pattern.is_done; }
+    fn info(&self) -> String { return format!("ConAssignmentStatement:[{}]", self.pattern.state); }
 }
 
 impl Grammar for Expression {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("Expression, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("Expression:[{}]", self.pattern.state); }
 }
 
 impl Grammar for WithIdExpression {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("WithIdExpression, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("WithIdExpression:[{}]", self.pattern.state); }
 }
 
 impl Grammar for ConExprSequence {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ConExprSequence, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("ConExprSequence:[{}]", self.pattern.state); }
 }
 
 impl Grammar for ConCallIndirectExpression {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ConCallIndirectExpression, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("ConCallIndirectExpression:[{}]", self.pattern.state); }
 }
 
-impl Grammar for CallIndirectArg {
+impl Grammar for FuncCallArg {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("CallIndirectArg, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("FuncCallArg:[{}]", self.pattern.state); }
+}
+
+impl Grammar for FuncCallArgSequence {
+    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
+    fn is_done(&self) -> bool { return self.pattern.is_done; }
+    fn info(&self) -> String { return format!("FuncCallArgSequence:[{}]", self.pattern.state); }
+}
+
+impl Grammar for ConFuncCallArgSequence {
+    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
+    fn is_done(&self) -> bool { return self.pattern.is_done; }
+    fn info(&self) -> String { return format!("ConFuncCallArgSequence:[{}]", self.pattern.state); }
 }
 
 impl Grammar for UnaryExpression {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("UnaryExpression, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("UnaryExpression:[{}]", self.pattern.state); }
 }
 
 impl Grammar for ConBinaryExpression {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ConBinaryExpression, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("ConBinaryExpression:[{}]", self.pattern.state); }
 }
 
 impl Grammar for ConConditionalExpression {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ConConditionalExpression, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("ConConditionalExpression:[{}]", self.pattern.state); }
 }
 
-impl Grammar for FunctionExpression {
+impl Grammar for TypeFunctionExpression {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("FunctionExpression, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("TypeFunctionExpression:[{}]", self.pattern.state); }
 }
 
 impl Grammar for ConMemberExpression {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ConMemberExpression, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("ConMemberExpression:[{}]", self.pattern.state); }
 }
 
 impl Grammar for GroupedOrTupleExpression {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("GroupedOrTupleExpression, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("GroupedOrTupleExpression:[{}]", self.pattern.state); }
 }
 
 impl Grammar for TypeOfExpression {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("TypeOfExpression, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("TypeOfExpression:[{}]", self.pattern.state); }
 }
 
 impl Grammar for OffsetExpression {
     fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
     fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("OffsetExpression, s:{}", self.pattern.state); }
+    fn info(&self) -> String { return format!("OffsetExpression:[{}]", self.pattern.state); }
+}
+
+impl Grammar for GenericArgument {
+    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
+    fn is_done(&self) -> bool { return self.pattern.is_done; }
+    fn info(&self) -> String { return format!("GenericArgument:[{}]", self.pattern.state); }
+}
+
+impl Grammar for TypeExpression {
+    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
+    fn is_done(&self) -> bool { return self.pattern.is_done; }
+    fn info(&self) -> String { return format!("TypeExpression:[{}]", self.pattern.state); }
 }

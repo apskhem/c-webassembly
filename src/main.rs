@@ -28,6 +28,7 @@ mod optimizer;
 mod parser;
 mod grammar;
 mod token;
+mod token_grammar;
 mod token_stream;
 mod tokenizer;
 mod transpiler;
