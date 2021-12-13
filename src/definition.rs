@@ -37,11 +37,10 @@ pub const SYMBOL_TOKENS: &[(&str, token::Symbol)] = &[
     ("<<",      token::Symbol::ShiftLeftLogical),
     (">>",      token::Symbol::ShiftRightLogical),
     (">>>",     token::Symbol::ShiftRightArithmatic),
-    ("%<",      token::Symbol::RotateLeft),
-    ("%>",      token::Symbol::RotateRight),
     ("!",       token::Symbol::LogicalNegation),
     ("&&",      token::Symbol::LogicalAnd),
     ("||",      token::Symbol::LogicalOr),
+    ("|>",      token::Symbol::PipeForward),
     ("?",       token::Symbol::Query),
     ("::",      token::Symbol::DoubleColon),
     ("{",       token::Symbol::LeftBrace),
@@ -51,11 +50,9 @@ pub const SYMBOL_TOKENS: &[(&str, token::Symbol)] = &[
 ];
 
 pub const KEYWORD_TOKENS: &[(&str, token::Keyword)] = &[
-    ("mod",     token::Keyword::Module),
     ("fn",      token::Keyword::Function),
     ("mut",     token::Keyword::Mutable),
-    ("lc",      token::Keyword::Local),
-    ("gb",      token::Keyword::Global),
+    ("let",     token::Keyword::Let),
     ("mem",     token::Keyword::Memory),
     ("tab",     token::Keyword::Table),
     ("type",    token::Keyword::Type),
@@ -70,5 +67,6 @@ pub const KEYWORD_TOKENS: &[(&str, token::Keyword)] = &[
     ("exp",     token::Keyword::Export),
     ("imp",     token::Keyword::Import),
     ("as",      token::Keyword::As),
-    ("from",    token::Keyword::From)
+    ("from",    token::Keyword::From),
+    ("incl",    token::Keyword::Include)
 ];

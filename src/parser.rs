@@ -1,4 +1,5 @@
 use std::collections::VecDeque;
+use std::error::Error;
 
 use crate::token;
 use crate::grammar;
@@ -31,7 +32,7 @@ impl Parser {
         println!("\n--");
     }
 
-    pub fn process(&mut self, token: &token::Token) -> Result<(), String> {
+    pub fn process(&mut self, token: &token::Token) -> Result<(), Box<dyn Error>> {
         self.counter += 1;
         self.show_status(token);
 
@@ -87,7 +88,7 @@ impl Parser {
     }
 }
 
-pub fn parse_syntax(tokens: &Vec<token::Token>) -> Result<(), String> {
+pub fn parse_syntax(tokens: &Vec<token::Token>) -> Result<(), Box<dyn Error>> {
     let mut process_state_machine = Parser::new();
 
     for token in tokens.iter() {

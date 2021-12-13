@@ -10,19 +10,24 @@ categories = ["compiler"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+proc-macro = true
+
 [dependencies]
+structopt = "0.3.23"
+owo-colors = "2.1.0"
+quote = "1.0.10"
+syn = "1.0.78"
 regex = { version = "1.5.4", features = ["std"] }
 
 [dev-dependencies]
 assert_cmd = "2.0.1"
 
-[profile.dev]
-opt-level = 0
-overflow-checks = true
-
 [profile.release]
 opt-level = "s"
-overflow-checks = true
+lto = "fat"
+panic = "abort"
+codegen-units = 1
 
 [[test]]
 path = "tests/default.rs"

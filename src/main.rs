@@ -16,11 +16,9 @@
     clippy::implicit_return
 )]
 
-#[macro_use] mod lib;
-
-use std::env;
 use std::error::Error;
 use std::time::Instant;
+use structopt::StructOpt;
 
 mod definition;
 mod io;
@@ -32,15 +30,16 @@ mod token_grammar;
 mod token_stream;
 mod tokenizer;
 mod transpiler;
+mod cli;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let now = Instant::now();
 
-    let args: Vec<String> = env::args().collect();
-    let in_file = args.get(1).expect("File path to be compiled is not found.");
+    // parse cli options
+    let opt = cli::Opt::from_args();
 
     // read file
-    let file_text = io::read_file(&in_file)?;
+    let file_text = io::read_file(opt.file())?;
 
     // tokenize
     let tokens = tokenizer::tokenize(&file_text)?;
@@ -51,7 +50,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // write file
     // io::write_file("out/sample.wasm")?;
 
-    // println!("{}", std::mem::size_of::<*const str>());
+    // println!("{}", std::mem::size_of::<std::ops::Range<usize>>());
 
     println!("Process time: {}ms", now.elapsed().as_millis());
 

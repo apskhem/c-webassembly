@@ -1,4 +1,5 @@
 use std::convert::TryFrom;
+use std::ops::Range;
 use regex::Regex;
 
 use crate::definition;
@@ -19,11 +20,9 @@ pub struct Comment<'a>(&'a str);
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Keyword {
-    Module,
     Function,
-    Local,
+    Let,
     Mutable,
-    Global,
     Memory,
     Table,
     Type,
@@ -38,7 +37,8 @@ pub enum Keyword {
     Export,
     Import,
     As,
-    From
+    From,
+    Include
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -74,12 +74,11 @@ pub enum Symbol {
     ShiftLeftLogical,       // <<
     ShiftRightArithmatic,   // >>
     ShiftRightLogical,      // >>>
-    RotateLeft,             // %<
-    RotateRight,            // %>
     LogicalNegation,        // !
     LogicalAnd,             // &&
     LogicalOr,              // ||
     Query,                  // ?
+    PipeForward,            // |>
     DoubleColon,            // ::
 
     // brackets
@@ -113,7 +112,7 @@ pub enum Literal<'a> {
 
 pub struct RawToken<'a> {
     value: &'a str,
-    range: (usize, usize)
+    range: Range<usize>
 }
 
 impl<'a> Identifier<'a> {
@@ -141,7 +140,7 @@ impl Symbol {
 }
 
 impl<'a> RawToken<'a> {
-    pub const fn new(value: &'a str, range: (usize, usize)) -> Self {
+    pub const fn new(value: &'a str, range: Range<usize>) -> Self {
         return Self {
             value,
             range
@@ -152,7 +151,7 @@ impl<'a> RawToken<'a> {
         return self.value;
     }
 
-    pub const fn range(&self) -> &(usize, usize) {
+    pub const fn range(&self) -> &Range<usize> {
         return &self.range;
     }
 }

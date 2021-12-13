@@ -1,4 +1,5 @@
 use std::collections::VecDeque;
+use std::error::Error;
 
 use crate::token;
 use crate::token_grammar;
@@ -12,7 +13,7 @@ pub trait Grammar {
 pub enum Result {
     Consumed(VecDeque<Box<dyn Grammar>>),
     Passed,
-    Unexpected(String)
+    Unexpected(Box<dyn Error>)
 }
 
 pub enum GrammarQuantifier<'a> {
@@ -65,7 +66,7 @@ impl<'a> GrammarPattern<'a> {
                     }
                 }
 
-                return Result::Unexpected(format!("Err!"));
+                return Result::Unexpected("Err!".into());
             },
             GrammarQuantifier::OptionalOne(prototypes) => {
                 for proto in prototypes.iter() {
@@ -125,6 +126,7 @@ impl<'a> GrammarPattern<'a> {
 // 2. first grammar of each return argument must not collide with sibling members.
 
 // start of definition
+#[derive(c_webassembly::Grammar)]
 pub struct Program {
     pattern: GrammarPattern<'static>
 }
@@ -134,98 +136,42 @@ impl Program {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::OptionalMany(&[
-                    || return Box::new(ModuleDeclaration::new())
-                ])
-            ])
-        };
-    }
-}
-
-// module declararion
-pub struct ModuleDeclaration {
-    pattern: GrammarPattern<'static>
-}
-
-impl ModuleDeclaration {
-    pub fn new() -> Self {
-        return Self {
-            pattern: GrammarPattern::new(&[
-                GrammarQuantifier::One(&[
-                    || return Box::new(token_grammar::TokenGrammar::from_keyword(token::Keyword::Module))
-                ]),
-                GrammarQuantifier::One(&[
-                    || return Box::new(ModuleBlock::new())
-                ])
-            ])
-        };
-    }
-}
-
-// module block
-pub struct ModuleBlock {
-    pattern: GrammarPattern<'static>
-}
-
-impl ModuleBlock {
-    pub fn new() -> Self {
-        return Self {
-            pattern: GrammarPattern::new(&[
-                GrammarQuantifier::One(&[
-                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::LeftBrace))
-                ]),
-                GrammarQuantifier::OptionalMany(&[
                     || return Box::new(FunctionDeclaration::new()),
                     || return Box::new(TypeDeclaration::new()),
                     || return Box::new(TableDeclaration::new()),
                     || return Box::new(MemoryDeclaration::new()),
-                    || return Box::new(GlobalDeclaration::new()),
+                    || return Box::new(VariableDeclaration::new()),
                     || return Box::new(ImportDeclaration::new()),
                     || return Box::new(ExportDeclaration::new()),
-                    || return Box::new(ExpressionStatement::new()),
                     || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::SemiColon))
+                ])
+            ])
+        };
+    }
+}
+
+// con type definition
+#[derive(c_webassembly::Grammar)]
+pub struct ConTypeAssignment {
+    pattern: GrammarPattern<'static>
+}
+
+impl ConTypeAssignment {
+    pub fn new() -> Self {
+        return Self {
+            pattern: GrammarPattern::new(&[
+                GrammarQuantifier::One(&[
+                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::Assignment))
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::RightBrace))
+                    || return Box::new(TypeExpression::new())
                 ])
             ])
         };
     }
 }
 
-// type definition
-pub struct TypeDefinition {
-    pattern: GrammarPattern<'static>
-}
-
-impl TypeDefinition {
-    pub fn new() -> Self {
-        return Self {
-            pattern: GrammarPattern::new(&[
-                GrammarQuantifier::One(&[
-                    || return Box::new(UnitType::new()),
-                    || return Box::new(ParentheseTypeVariant::new())
-                ])
-            ])
-        };
-    }
-}
-
-pub struct UnitType {
-    pattern: GrammarPattern<'static>
-}
-
-impl UnitType {
-    pub fn new() -> Self {
-        return Self {
-            pattern: GrammarPattern::new(&[
-                GrammarQuantifier::One(&[
-                    || return Box::new(token_grammar::TokenGrammar::any_type())
-                ])
-            ])
-        };
-    }
-}
-
+#[derive(c_webassembly::Grammar)]
 pub struct VecShorthandType {
     pattern: GrammarPattern<'static>
 }
@@ -245,6 +191,7 @@ impl VecShorthandType {
     }
 }
 
+#[derive(c_webassembly::Grammar)]
 pub struct ParentheseTypeVariant {
     pattern: GrammarPattern<'static>
 }
@@ -268,6 +215,7 @@ impl ParentheseTypeVariant {
     }
 }
 
+#[derive(c_webassembly::Grammar)]
 pub struct ConRangeType {
     pattern: GrammarPattern<'static>
 }
@@ -296,6 +244,7 @@ impl ConRangeType {
     }
 }
 
+#[derive(c_webassembly::Grammar)]
 pub struct ConTupleType {
     pattern: GrammarPattern<'static>
 }
@@ -316,6 +265,7 @@ impl ConTupleType {
     }
 }
 
+#[derive(c_webassembly::Grammar)]
 pub struct TupleTypeRecursiveSequence {
     pattern: GrammarPattern<'static>
 }
@@ -332,6 +282,7 @@ impl TupleTypeRecursiveSequence {
     }
 }
 
+#[derive(c_webassembly::Grammar)]
 pub struct TupleTypeSequence {
     pattern: GrammarPattern<'static>
 }
@@ -352,45 +303,22 @@ impl TupleTypeSequence {
 }
 
 // global declaration
+#[derive(c_webassembly::Grammar)]
 pub struct GlobalDeclaration {
     pattern: GrammarPattern<'static>
 }
 
-impl GlobalDeclaration {
-    pub fn new() -> Self {
-        return Self {
-            pattern: GrammarPattern::new(&[
-                GrammarQuantifier::One(&[
-                    || return Box::new(token_grammar::TokenGrammar::from_keyword(token::Keyword::Global))
-                ]),
-                GrammarQuantifier::One(&[
-                    || return Box::new(MutableIdDeclaration::new()),
-                    || return Box::new(MultiIdDeclaration::new())
-                ]),
-                GrammarQuantifier::One(&[
-                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::LeftArrow))
-                ]),
-                GrammarQuantifier::One(&[
-                    || return Box::new(Expression::new())
-                ]),
-                GrammarQuantifier::One(&[
-                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::SemiColon))
-                ])
-            ])
-        };
-    }
-}
-
-pub struct ImportedGlobalDeclaration {
+#[derive(c_webassembly::Grammar)]
+pub struct ImportedVariableDeclaration {
     pattern: GrammarPattern<'static>
 }
 
-impl ImportedGlobalDeclaration {
+impl ImportedVariableDeclaration {
     pub fn new() -> Self {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token_grammar::TokenGrammar::from_keyword(token::Keyword::Global))
+                    || return Box::new(token_grammar::TokenGrammar::from_keyword(token::Keyword::Let))
                 ]),
                 GrammarQuantifier::OptionalOne(&[
                     || return Box::new(token_grammar::TokenGrammar::from_keyword(token::Keyword::Mutable))
@@ -399,10 +327,7 @@ impl ImportedGlobalDeclaration {
                     || return Box::new(token_grammar::TokenGrammar::any_identifier())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::Assignment))
-                ]),
-                GrammarQuantifier::One(&[
-                    || return Box::new(TypeDefinition::new())
+                    || return Box::new(ConTypeAssignment::new())
                 ])
             ])
         };
@@ -410,6 +335,7 @@ impl ImportedGlobalDeclaration {
 }
 
 // type declaration
+#[derive(c_webassembly::Grammar)]
 pub struct TypeDeclaration {
     pattern: GrammarPattern<'static>
 }
@@ -425,10 +351,7 @@ impl TypeDeclaration {
                     || return Box::new(token_grammar::TokenGrammar::any_identifier())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::Assignment))
-                ]),
-                GrammarQuantifier::One(&[
-                    || return Box::new(TypeExpression::new())
+                    || return Box::new(ConTypeAssignment::new())
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::SemiColon))
@@ -439,6 +362,7 @@ impl TypeDeclaration {
 }
 
 // table declaration
+#[derive(c_webassembly::Grammar)]
 pub struct TableDeclaration {
     pattern: GrammarPattern<'static>
 }
@@ -454,10 +378,7 @@ impl TableDeclaration {
                     || return Box::new(token_grammar::TokenGrammar::any_identifier())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::Assignment))
-                ]),
-                GrammarQuantifier::One(&[
-                    || return Box::new(TypeDefinition::new())
+                    || return Box::new(ConTypeAssignment::new())
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::SemiColon))
@@ -467,6 +388,7 @@ impl TableDeclaration {
     }
 }
 
+#[derive(c_webassembly::Grammar)]
 pub struct ImportedTableDeclaration {
     pattern: GrammarPattern<'static>
 }
@@ -482,10 +404,7 @@ impl ImportedTableDeclaration {
                     || return Box::new(token_grammar::TokenGrammar::any_identifier())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::Assignment))
-                ]),
-                GrammarQuantifier::One(&[
-                    || return Box::new(TypeDefinition::new())
+                    || return Box::new(ConTypeAssignment::new())
                 ])
             ])
         };
@@ -493,6 +412,7 @@ impl ImportedTableDeclaration {
 }
 
 // memory declaration
+#[derive(c_webassembly::Grammar)]
 pub struct MemoryDeclaration {
     pattern: GrammarPattern<'static>
 }
@@ -508,10 +428,7 @@ impl MemoryDeclaration {
                     || return Box::new(token_grammar::TokenGrammar::any_identifier())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::Assignment))
-                ]),
-                GrammarQuantifier::One(&[
-                    || return Box::new(TypeDefinition::new())
+                    || return Box::new(ConTypeAssignment::new())
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::SemiColon))
@@ -521,6 +438,7 @@ impl MemoryDeclaration {
     }
 }
 
+#[derive(c_webassembly::Grammar)]
 pub struct ImportedMemoryDeclaration {
     pattern: GrammarPattern<'static>
 }
@@ -536,10 +454,7 @@ impl ImportedMemoryDeclaration {
                     || return Box::new(token_grammar::TokenGrammar::any_identifier())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::Assignment))
-                ]),
-                GrammarQuantifier::One(&[
-                    || return Box::new(TypeDefinition::new())
+                    || return Box::new(ConTypeAssignment::new())
                 ])
             ])
         };
@@ -547,6 +462,7 @@ impl ImportedMemoryDeclaration {
 }
 
 // import declaration
+#[derive(c_webassembly::Grammar)]
 pub struct ImportDeclaration {
     pattern: GrammarPattern<'static>
 }
@@ -562,7 +478,7 @@ impl ImportDeclaration {
                     || return Box::new(ImportedFunctionDeclaration::new()),
                     || return Box::new(ImportedTableDeclaration::new()),
                     || return Box::new(ImportedMemoryDeclaration::new()),
-                    || return Box::new(ImportedGlobalDeclaration::new())
+                    || return Box::new(ImportedVariableDeclaration::new())
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(token_grammar::TokenGrammar::from_keyword(token::Keyword::From))
@@ -579,6 +495,7 @@ impl ImportDeclaration {
 }
 
 // export declaration
+#[derive(c_webassembly::Grammar)]
 pub struct ExportDeclaration {
     pattern: GrammarPattern<'static>
 }
@@ -590,11 +507,14 @@ impl ExportDeclaration {
                 GrammarQuantifier::One(&[
                     || return Box::new(token_grammar::TokenGrammar::from_keyword(token::Keyword::Export))
                 ]),
+                GrammarQuantifier::OptionalOne(&[
+                    || return Box::new(token_grammar::TokenGrammar::any_string_literal())
+                ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(FunctionDeclaration::new()),
                     || return Box::new(TableDeclaration::new()),
                     || return Box::new(MemoryDeclaration::new()),
-                    || return Box::new(GlobalDeclaration::new()),
+                    || return Box::new(VariableDeclaration::new()),
                     || return Box::new(AliasedExportDeclaration::new())
                 ])
             ])
@@ -602,6 +522,7 @@ impl ExportDeclaration {
     }
 }
 
+#[derive(c_webassembly::Grammar)]
 pub struct AliasedExportDeclaration {
     pattern: GrammarPattern<'static>
 }
@@ -628,6 +549,7 @@ impl AliasedExportDeclaration {
 }
 
 // function declaration and its components
+#[derive(c_webassembly::Grammar)]
 pub struct FunctionDeclaration {
     pattern: GrammarPattern<'static>
 }
@@ -653,6 +575,7 @@ impl FunctionDeclaration {
     }
 }
 
+#[derive(c_webassembly::Grammar)]
 pub struct ImportedFunctionDeclaration {
     pattern: GrammarPattern<'static>
 }
@@ -676,6 +599,7 @@ impl ImportedFunctionDeclaration {
 }
 
 // -> type signature
+#[derive(c_webassembly::Grammar)]
 pub struct TypeSignature {
     pattern: GrammarPattern<'static>
 }
@@ -696,6 +620,7 @@ impl TypeSignature {
 }
 
 // -> type parameter
+#[derive(c_webassembly::Grammar)]
 pub struct TypeParameter {
     pattern: GrammarPattern<'static>
 }
@@ -719,6 +644,7 @@ impl TypeParameter {
 }
 
 // -> type param sequence
+#[derive(c_webassembly::Grammar)]
 pub struct TypeParamSequence {
     pattern: GrammarPattern<'static>
 }
@@ -739,6 +665,7 @@ impl TypeParamSequence {
 }
 
 // -> con: type param sequence
+#[derive(c_webassembly::Grammar)]
 pub struct ConTypeParamSequence {
     pattern: GrammarPattern<'static>
 }
@@ -759,6 +686,7 @@ impl ConTypeParamSequence {
 }
 
 // -> signature
+#[derive(c_webassembly::Grammar)]
 pub struct Signature {
     pattern: GrammarPattern<'static>
 }
@@ -779,6 +707,7 @@ impl Signature {
 }
 
 // -> parameter
+#[derive(c_webassembly::Grammar)]
 pub struct Parameter {
     pattern: GrammarPattern<'static>
 }
@@ -802,6 +731,7 @@ impl Parameter {
 }
 
 // -> parameter sequence
+#[derive(c_webassembly::Grammar)]
 pub struct ParamSequence {
     pattern: GrammarPattern<'static>
 }
@@ -822,6 +752,7 @@ impl ParamSequence {
 }
 
 // -> parameter type
+#[derive(c_webassembly::Grammar)]
 pub struct ParamType {
     pattern: GrammarPattern<'static>
 }
@@ -837,13 +768,14 @@ impl ParamType {
                     || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::Colon))
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(TypeDefinition::new())
+                    || return Box::new(TypeExpression::new())
                 ])
             ])
         };
     }
 }
 
+#[derive(c_webassembly::Grammar)]
 pub struct ConParamType {
     pattern: GrammarPattern<'static>
 }
@@ -864,6 +796,7 @@ impl ConParamType {
 }
 
 // -> return type
+#[derive(c_webassembly::Grammar)]
 pub struct ResultType {
     pattern: GrammarPattern<'static>
 }
@@ -876,7 +809,7 @@ impl ResultType {
                     || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::RightArrow))
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(TypeDefinition::new())
+                    || return Box::new(TypeExpression::new())
                 ])
             ])
         };
@@ -884,6 +817,7 @@ impl ResultType {
 }
 
 // function block
+#[derive(c_webassembly::Grammar)]
 pub struct FunctionBlock {
     pattern: GrammarPattern<'static>
 }
@@ -896,13 +830,14 @@ impl FunctionBlock {
                     || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::LeftBrace))
                 ]),
                 GrammarQuantifier::OptionalMany(&[
-                    || return Box::new(LocalDeclaration::new()),
+                    || return Box::new(VariableDeclaration::new()),
                     || return Box::new(ExpressionStatement::new()),
                     || return Box::new(IfStatement::new()),
                     || return Box::new(WhileStatement::new()),
                     || return Box::new(ReturnStatement::new()),
                     || return Box::new(BreakStatement::new()),
                     || return Box::new(ContinueStatement::new()),
+                    || return Box::new(FunctionBlock::new()),
                     || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::SemiColon))
                 ]),
                 GrammarQuantifier::One(&[
@@ -914,26 +849,24 @@ impl FunctionBlock {
 }
 
 // -> local
-pub struct LocalDeclaration {
+#[derive(c_webassembly::Grammar)]
+pub struct VariableDeclaration {
     pattern: GrammarPattern<'static>
 }
 
-impl LocalDeclaration {
+impl VariableDeclaration {
     pub fn new() -> Self {
         return Self {
             pattern: GrammarPattern::new(&[
                 GrammarQuantifier::One(&[
-                    || return Box::new(token_grammar::TokenGrammar::from_keyword(token::Keyword::Local))
+                    || return Box::new(token_grammar::TokenGrammar::from_keyword(token::Keyword::Let))
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(MutableIdDeclaration::new()),
                     || return Box::new(MultiIdDeclaration::new())
                 ]),
                 GrammarQuantifier::One(&[
-                    || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::LeftArrow))
-                ]),
-                GrammarQuantifier::One(&[
-                    || return Box::new(Expression::new())
+                    || return Box::new(ConAssignmentExpression::new())
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::SemiColon))
@@ -943,6 +876,7 @@ impl LocalDeclaration {
     }
 }
 
+#[derive(c_webassembly::Grammar)]
 pub struct MutableIdDeclaration {
     pattern: GrammarPattern<'static>
 }
@@ -962,6 +896,7 @@ impl MutableIdDeclaration {
     }
 }
 
+#[derive(c_webassembly::Grammar)]
 pub struct MultiIdDeclaration {
     pattern: GrammarPattern<'static>
 }
@@ -987,6 +922,7 @@ impl MultiIdDeclaration {
     }
 }
 
+#[derive(c_webassembly::Grammar)]
 pub struct ConMultiIdDeclaration {
     pattern: GrammarPattern<'static>
 }
@@ -1007,6 +943,7 @@ impl ConMultiIdDeclaration {
 }
 
 // -> if
+#[derive(c_webassembly::Grammar)]
 pub struct IfStatement {
     pattern: GrammarPattern<'static>
 }
@@ -1035,6 +972,7 @@ impl IfStatement {
     }
 }
 
+#[derive(c_webassembly::Grammar)]
 pub struct ElseIfStatement {
     pattern: GrammarPattern<'static>
 }
@@ -1057,6 +995,7 @@ impl ElseIfStatement {
     }
 }
 
+#[derive(c_webassembly::Grammar)]
 pub struct ElseStatement {
     pattern: GrammarPattern<'static>
 }
@@ -1077,6 +1016,7 @@ impl ElseStatement {
 }
 
 // -> while
+#[derive(c_webassembly::Grammar)]
 pub struct WhileStatement {
     pattern: GrammarPattern<'static>
 }
@@ -1099,6 +1039,7 @@ impl WhileStatement {
     }
 }
 
+#[derive(c_webassembly::Grammar)]
 pub struct BreakStatement {
     pattern: GrammarPattern<'static>
 }
@@ -1118,6 +1059,7 @@ impl BreakStatement {
     }
 }
 
+#[derive(c_webassembly::Grammar)]
 pub struct ContinueStatement {
     pattern: GrammarPattern<'static>
 }
@@ -1138,6 +1080,7 @@ impl ContinueStatement {
 }
 
 // -> return
+#[derive(c_webassembly::Grammar)]
 pub struct ReturnStatement {
     pattern: GrammarPattern<'static>
 }
@@ -1161,6 +1104,7 @@ impl ReturnStatement {
 }
 
 // -> expression statement
+#[derive(c_webassembly::Grammar)]
 pub struct ExpressionStatement {
     pattern: GrammarPattern<'static>
 }
@@ -1173,7 +1117,7 @@ impl ExpressionStatement {
                     || return Box::new(Expression::new())
                 ]),
                 GrammarQuantifier::OptionalOne(&[
-                    || return Box::new(ConAssignmentStatement::new())
+                    || return Box::new(ConAssignmentExpression::new())
                 ]),
                 GrammarQuantifier::One(&[
                     || return Box::new(token_grammar::TokenGrammar::from_symbol(token::Symbol::SemiColon))
@@ -1184,11 +1128,12 @@ impl ExpressionStatement {
 }
 
 // -> assignment
-pub struct ConAssignmentStatement {
+#[derive(c_webassembly::Grammar)]
+pub struct ConAssignmentExpression {
     pattern: GrammarPattern<'static>
 }
 
-impl ConAssignmentStatement {
+impl ConAssignmentExpression {
     pub fn new() -> Self {
         return Self {
             pattern: GrammarPattern::new(&[
@@ -1203,6 +1148,7 @@ impl ConAssignmentStatement {
     }
 }
 
+#[derive(c_webassembly::Grammar)]
 pub struct Expression {
     pattern: GrammarPattern<'static>
 }
@@ -1231,6 +1177,7 @@ impl Expression {
 }
 
 // -> with id expression
+#[derive(c_webassembly::Grammar)]
 pub struct WithIdExpression {
     pattern: GrammarPattern<'static>
 }
@@ -1254,6 +1201,7 @@ impl WithIdExpression {
     }
 }
 
+#[derive(c_webassembly::Grammar)]
 pub struct ConExprSequence {
     pattern: GrammarPattern<'static>
 }
@@ -1274,6 +1222,7 @@ impl ConExprSequence {
 }
 
 // -> call indirect
+#[derive(c_webassembly::Grammar)]
 pub struct ConCallIndirectExpression {
     pattern: GrammarPattern<'static>
 }
@@ -1297,6 +1246,7 @@ impl ConCallIndirectExpression {
 }
 
 // -> call indirect argument
+#[derive(c_webassembly::Grammar)]
 pub struct FuncCallArg {
     pattern: GrammarPattern<'static>
 }
@@ -1319,6 +1269,7 @@ impl FuncCallArg {
     }
 }
 
+#[derive(c_webassembly::Grammar)]
 pub struct FuncCallArgSequence {
     pattern: GrammarPattern<'static>
 }
@@ -1338,6 +1289,7 @@ impl FuncCallArgSequence {
     }
 }
 
+#[derive(c_webassembly::Grammar)]
 pub struct ConFuncCallArgSequence {
     pattern: GrammarPattern<'static>
 }
@@ -1358,6 +1310,7 @@ impl ConFuncCallArgSequence {
 }
 
 // -> unary
+#[derive(c_webassembly::Grammar)]
 pub struct UnaryExpression {
     pattern: GrammarPattern<'static>
 }
@@ -1378,6 +1331,7 @@ impl UnaryExpression {
 }
 
 // -> binary
+#[derive(c_webassembly::Grammar)]
 pub struct ConBinaryExpression {
     pattern: GrammarPattern<'static>
 }
@@ -1398,6 +1352,7 @@ impl ConBinaryExpression {
 }
 
 // -> conditional (ternary)
+#[derive(c_webassembly::Grammar)]
 pub struct ConConditionalExpression {
     pattern: GrammarPattern<'static>
 }
@@ -1424,6 +1379,7 @@ impl ConConditionalExpression {
 }
 
 // -> member
+#[derive(c_webassembly::Grammar)]
 pub struct ConMemberExpression {
     pattern: GrammarPattern<'static>
 }
@@ -1444,6 +1400,7 @@ impl ConMemberExpression {
 }
 
 // -> grouped
+#[derive(c_webassembly::Grammar)]
 pub struct GroupedOrTupleExpression {
     pattern: GrammarPattern<'static>
 }
@@ -1470,6 +1427,7 @@ impl GroupedOrTupleExpression {
 }
 
 // -> type function
+#[derive(c_webassembly::Grammar)]
 pub struct TypeFunctionExpression {
     pattern: GrammarPattern<'static>
 }
@@ -1490,6 +1448,7 @@ impl TypeFunctionExpression {
 }
 
 // -> typeof
+#[derive(c_webassembly::Grammar)]
 pub struct TypeOfExpression {
     pattern: GrammarPattern<'static>
 }
@@ -1510,6 +1469,7 @@ impl TypeOfExpression {
 }
 
 // -> offset
+#[derive(c_webassembly::Grammar)]
 pub struct OffsetExpression {
     pattern: GrammarPattern<'static>
 }
@@ -1546,6 +1506,7 @@ impl OffsetExpression {
 }
 
 // -> ganeric
+#[derive(c_webassembly::Grammar)]
 pub struct GenericArgument {
     pattern: GrammarPattern<'static>
 }
@@ -1568,6 +1529,7 @@ impl GenericArgument {
     }
 }
 
+#[derive(c_webassembly::Grammar)]
 pub struct TypeExpression {
     pattern: GrammarPattern<'static>
 }
@@ -1580,395 +1542,10 @@ impl TypeExpression {
                     || return Box::new(token_grammar::TokenGrammar::any_identifier()),
                     || return Box::new(token_grammar::TokenGrammar::any_type()),
                     || return Box::new(TypeFunctionExpression::new()),
-                    || return Box::new(TypeSignature::new()),
-                    || return Box::new(TypeOfExpression::new())
+                    || return Box::new(ParentheseTypeVariant::new()),
+                    || return Box::new(TypeOfExpression::new()),
                 ])
             ])
         };
     }
-}
-
-// implement Grammar
-impl Grammar for Program {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("Program:[{}]", self.pattern.state); }
-}
-
-impl Grammar for TypeDefinition {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("TypeDefinition:[{}]", self.pattern.state); }
-}
-
-impl Grammar for UnitType {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("UnitType:[{}]", self.pattern.state); }
-}
-
-impl Grammar for VecShorthandType {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("VecShorthandType:[{}]", self.pattern.state); }
-}
-
-impl Grammar for ParentheseTypeVariant {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ParentheseTypeVariant:[{}]", self.pattern.state); }
-}
-
-impl Grammar for ConRangeType {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ConRangeType:[{}]", self.pattern.state); }
-}
-
-impl Grammar for ConTupleType {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ConTupleType:[{}]", self.pattern.state); }
-}
-
-impl Grammar for TupleTypeRecursiveSequence {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("TupleTypeRecursiveSequence:[{}]", self.pattern.state); }
-}
-
-impl Grammar for TupleTypeSequence {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("TupleTypeSequence:[{}]", self.pattern.state); }
-}
-
-impl Grammar for ModuleDeclaration {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ModuleDeclaration:[{}]", self.pattern.state); }
-}
-
-impl Grammar for ModuleBlock {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ModuleBlock:[{}]", self.pattern.state); }
-}
-
-impl Grammar for FunctionDeclaration {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("FunctionDeclaration:[{}]", self.pattern.state); }
-}
-
-impl Grammar for ImportedFunctionDeclaration {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ImportedFunctionDeclaration:[{}]", self.pattern.state); }
-}
-
-impl Grammar for GlobalDeclaration {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("GlobalDeclaration:[{}]", self.pattern.state); }
-}
-
-impl Grammar for ImportedGlobalDeclaration {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ImportedGlobalDeclaration:[{}]", self.pattern.state); }
-}
-
-impl Grammar for MemoryDeclaration {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("MemoryDeclaration:[{}]", self.pattern.state); }
-}
-
-impl Grammar for ImportedMemoryDeclaration {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ImportedMemoryDeclaration:[{}]", self.pattern.state); }
-}
-
-impl Grammar for TypeDeclaration {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("TypeDeclaration:[{}]", self.pattern.state); }
-}
-
-impl Grammar for TableDeclaration {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("TableDeclaration:[{}]", self.pattern.state); }
-}
-
-impl Grammar for ImportedTableDeclaration {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ImportedTableDeclaration:[{}]", self.pattern.state); }
-}
-
-impl Grammar for ImportDeclaration {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ImportDeclaration:[{}]", self.pattern.state); }
-}
-
-impl Grammar for ExportDeclaration {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ExportDeclaration:[{}]", self.pattern.state); }
-}
-
-impl Grammar for AliasedExportDeclaration {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("AliasedExportDeclaration:[{}]", self.pattern.state); }
-}
-
-impl Grammar for Signature {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("Signature:[{}]", self.pattern.state); }
-}
-
-impl Grammar for TypeSignature {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("TypeSignature:[{}]", self.pattern.state); }
-}
-
-impl Grammar for TypeParameter {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("TypeParameter:[{}]", self.pattern.state); }
-}
-
-impl Grammar for TypeParamSequence {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("TypeParamSequence:[{}]", self.pattern.state); }
-}
-
-impl Grammar for ConTypeParamSequence {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ConTypeParamSequence:[{}]", self.pattern.state); }
-}
-
-impl Grammar for Parameter {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("Parameter:[{}]", self.pattern.state); }
-}
-
-impl Grammar for ParamSequence {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ParamSequence:[{}]", self.pattern.state); }
-}
-
-impl Grammar for ParamType {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ParamType:[{}]", self.pattern.state); }
-}
-
-impl Grammar for ConParamType {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ConParamType:[{}]", self.pattern.state); }
-}
-
-impl Grammar for ResultType {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ResultType:[{}]", self.pattern.state); }
-}
-
-impl Grammar for FunctionBlock {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("FunctionBlock:[{}]", self.pattern.state); }
-}
-
-impl Grammar for LocalDeclaration {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("LocalDeclaration:[{}]", self.pattern.state); }
-}
-
-impl Grammar for MutableIdDeclaration {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("MutableIdDeclaration:[{}]", self.pattern.state); }
-}
-
-impl Grammar for MultiIdDeclaration {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("MultiIdDeclaration:[{}]", self.pattern.state); }
-}
-
-impl Grammar for ConMultiIdDeclaration {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ConMultiIdDeclaration:[{}]", self.pattern.state); }
-}
-
-impl Grammar for IfStatement {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("IfStatement:[{}]", self.pattern.state); }
-}
-
-impl Grammar for ElseIfStatement {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ElseIfStatement:[{}]", self.pattern.state); }
-}
-
-impl Grammar for ElseStatement {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ElseStatement:[{}]", self.pattern.state); }
-}
-
-impl Grammar for WhileStatement {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("WhileStatement:[{}]", self.pattern.state); }
-}
-
-impl Grammar for BreakStatement {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("BreakStatement:[{}]", self.pattern.state); }
-}
-
-impl Grammar for ContinueStatement {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ContinueStatement:[{}]", self.pattern.state); }
-}
-
-impl Grammar for ReturnStatement {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ReturnStatement:[{}]", self.pattern.state); }
-}
-
-impl Grammar for ExpressionStatement {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ExpressionStatement:[{}]", self.pattern.state); }
-}
-
-impl Grammar for ConAssignmentStatement {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ConAssignmentStatement:[{}]", self.pattern.state); }
-}
-
-impl Grammar for Expression {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("Expression:[{}]", self.pattern.state); }
-}
-
-impl Grammar for WithIdExpression {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("WithIdExpression:[{}]", self.pattern.state); }
-}
-
-impl Grammar for ConExprSequence {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ConExprSequence:[{}]", self.pattern.state); }
-}
-
-impl Grammar for ConCallIndirectExpression {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ConCallIndirectExpression:[{}]", self.pattern.state); }
-}
-
-impl Grammar for FuncCallArg {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("FuncCallArg:[{}]", self.pattern.state); }
-}
-
-impl Grammar for FuncCallArgSequence {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("FuncCallArgSequence:[{}]", self.pattern.state); }
-}
-
-impl Grammar for ConFuncCallArgSequence {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ConFuncCallArgSequence:[{}]", self.pattern.state); }
-}
-
-impl Grammar for UnaryExpression {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("UnaryExpression:[{}]", self.pattern.state); }
-}
-
-impl Grammar for ConBinaryExpression {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ConBinaryExpression:[{}]", self.pattern.state); }
-}
-
-impl Grammar for ConConditionalExpression {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ConConditionalExpression:[{}]", self.pattern.state); }
-}
-
-impl Grammar for TypeFunctionExpression {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("TypeFunctionExpression:[{}]", self.pattern.state); }
-}
-
-impl Grammar for ConMemberExpression {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("ConMemberExpression:[{}]", self.pattern.state); }
-}
-
-impl Grammar for GroupedOrTupleExpression {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("GroupedOrTupleExpression:[{}]", self.pattern.state); }
-}
-
-impl Grammar for TypeOfExpression {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("TypeOfExpression:[{}]", self.pattern.state); }
-}
-
-impl Grammar for OffsetExpression {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("OffsetExpression:[{}]", self.pattern.state); }
-}
-
-impl Grammar for GenericArgument {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("GenericArgument:[{}]", self.pattern.state); }
-}
-
-impl Grammar for TypeExpression {
-    fn process(&mut self, token: &token::Token) -> Result { return self.pattern.execute(token); }
-    fn is_done(&self) -> bool { return self.pattern.is_done; }
-    fn info(&self) -> String { return format!("TypeExpression:[{}]", self.pattern.state); }
 }

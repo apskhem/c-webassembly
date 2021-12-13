@@ -1,4 +1,5 @@
 use std::convert::TryFrom;
+use std::error::Error;
 use std::fmt;
 
 use crate::token_stream;
@@ -54,14 +55,14 @@ impl fmt::Debug for CharPositionCounter {
 }
 
 // main program section
-pub fn tokenize(text: &str) -> Result<Vec<token::Token>, String> {
+pub fn tokenize(text: &str) -> Result<Vec<token::Token>, Box<dyn Error>> {
     let mut token_collector = token_stream::RawTokenStream::new(text);
     let mut char_pos_counter = CharPositionCounter::new();
     let mut mode = TokenSequence::None;
     let mut offset = 0;
 
-    let mut iter = text.chars().enumerate();
-    while let Some((i, c)) = iter.next() {
+    let mut iter = text.chars();
+    while let Some(c) = iter.next() {
         char_pos_counter.next_char();
         
         let z = c.len_utf8();
@@ -192,25 +193,26 @@ pub fn tokenize(text: &str) -> Result<Vec<token::Token>, String> {
         }
         // others will be error
         else {
-            return Err(format!("unknown start of token: `{}` at {:?}", c, char_pos_counter));
+            return Err(format!("unknown start of token: `{}` at {:?}", c, char_pos_counter).into());
         }
         
-        token_collector.set_start(i, offset, z);
+        token_collector.set_start(offset, z);
         offset += z;
     }
 
     // termination validation
     if !token_collector.temp().is_empty() {
         return match mode {
-            TokenSequence::StringLiteral => Err(format!("unexpected unclosed string")),
-            _ => Err(format!("unexpected tokenization error"))
+            TokenSequence::StringLiteral => Err("unexpected unclosed string".into()),
+            _ => Err("unexpected tokenization error".into())
         }
     }
 
     // validate tokens
-    let mut res = Vec::with_capacity(token_collector.count());
+    let collected = token_collector.collect();
+    let mut res = Vec::with_capacity(collected.len());
+    let mut iter = collected.into_iter();
     
-    let mut iter = token_collector.collect().into_iter();
     while let Some(raw_token) = iter.next() {
         let token = token::Token::try_from(raw_token)?;
 

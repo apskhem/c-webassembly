@@ -118,10 +118,9 @@ impl TokenGrammar {
                 || y == &token::Symbol::ShiftLeftLogical
                 || y == &token::Symbol::ShiftRightArithmatic
                 || y == &token::Symbol::ShiftRightLogical
-                || y == &token::Symbol::RotateLeft
-                || y == &token::Symbol::RotateRight
                 || y == &token::Symbol::LogicalAnd
                 || y == &token::Symbol::LogicalOr
+                || y == &token::Symbol::PipeForward
             },
             _ => false
         };
@@ -186,7 +185,7 @@ impl Grammar for TokenGrammar {
             return grammar::Result::Consumed(VecDeque::new());
         }
         else {
-            return grammar::Result::Unexpected(format!("mismatched token: '{:?}' compared with '{:?}'", self, token));
+            return grammar::Result::Unexpected(format!("mismatched token: '{:?}' compared with '{:?}'", self, token).into());
         }
     }
 

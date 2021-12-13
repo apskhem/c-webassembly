@@ -1,28 +1,33 @@
-mod {
-    mem memory = (1; page; 2);
-    tab table = (1; fref; 100);
-    
-    type BinaryFunction = fn(i32, i32) -> i32;
+mem memory = (1; page; 2);
+tab table = (1; fref; 100);
 
-    // testing function
-    fn test(a: i32, b: i32) -> (i32; 2) {
-        if (a) {
-            lc l0 <- a;
-        }
-        elif (a) {
-            while (a < b) {
-                break;
-            }
-        }
-        else {
+type BinaryFunction = fn(i32, i32) -> i32;
 
-        }
+/*
+    this function demonstrate the example
+    of the c-webassembly syntax
+*/
+exp "testingFunction" fn test(a: i32, b: i32) -> (i32; 2) {
+    let a <- 10;
 
-        test();
-
-        lc indirect_call_test <- *10(table)::<BinaryFunction>(10, er, t, 3 + 1.2);
-        lc int_test <- 1234;
-        int_test <- I32.add(1, 3) + (-1);
-        ret -10.1;
+    if (a) {
+        let l0 <- a;
     }
+    elif (a) {
+        while (a < b) {
+            break;
+        }
+    }
+    else {
+
+    }
+
+    // normal function call
+    test();
+
+    // call function from table, and store the result in the variable
+    let indirect_call_test <- *10(table)::<BinaryFunction>(10, a + 10);
+    let int_test <- 1234;
+    int_test <- I32.add(1, 3) + (-1);
+    ret (-10.1, indirect_call_test);
 }
